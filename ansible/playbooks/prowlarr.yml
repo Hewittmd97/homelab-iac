@@ -1,0 +1,44 @@
+---
+- name: Configure Prowlarr container
+  hosts: prowlarr
+  become: true
+  tasks:
+
+    - name: Check if Prowlarr is installed
+      ansible.builtin.stat:
+        path: /opt/Prowlarr/Prowlarr
+      register: prowlarr_binary
+
+    - name: Download Prowlarr release
+      ansible.builtin.get_url:
+        url: https://github.com/Prowlarr/Prowlarr/releases/latest/download/Prowlarr.master.linux-core-x64.tar.gz
+        dest: /tmp/prowlarr.tar.gz
+      when: not prowlarr_binary.stat.exists
+
+    - name: Extract Prowlarr to /opt
+      ansible.builtin.unarchive:
+        src: /tmp/prowlarr.tar.gz
+        dest: /opt
+        remote_src: true
+      when: not prowlarr_binary.stat.exists
+
+    - name: Create systemd service for Prowlarr
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/prowlarr.service
+        content: |
+          [Unit]
+          Description=Prowlarr
+          After=network.target
+          [Service]
+          User=root
+          ExecStart=/opt/Prowlarr/Prowlarr -nobrowser -data=/var/lib/prowlarr/
+          Restart=on-failure
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start Prowlarr service
+      ansible.builtin.systemd:
+        name: prowlarr
+        enabled: true
+        state: started
+        daemon_reload: true
