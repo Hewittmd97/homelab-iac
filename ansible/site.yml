@@ -1,0 +1,12 @@
+---
+- name: Import Prowlarr playbook
+  ansible.builtin.import_playbook: playbooks/prowlarr.yml
+
+- name: Import Radarr playbook
+  ansible.builtin.import_playbook: playbooks/radarr.yml
+
+- name: Import Sonarr playbook
+  ansible.builtin.import_playbook: playbooks/sonarr.yml
+
+- name: Import Plex playbook
+  ansible.builtin.import_playbook: playbooks/plex.yml
