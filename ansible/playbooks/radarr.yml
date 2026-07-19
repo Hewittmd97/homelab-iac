@@ -1,0 +1,47 @@
+---
+- name: Configure Radarr container
+  hosts: radarr
+  become: true
+  tasks:
+
+    - name: Check if Radarr is installed
+      ansible.builtin.stat:
+        path: /opt/Radarr/Radarr
+      register: radarr_binary
+
+    - name: Download Radarr release
+      ansible.builtin.get_url:
+        url: https://github.com/Radarr/Radarr/releases/latest/download/Radarr.master.linux-core-x64.tar.gz
+        dest: /tmp/radarr.tar.gz
+      when: not radarr_binary.stat.exists
+
+    - name: Extract Radarr to /opt
+      ansible.builtin.unarchive:
+        src: /tmp/radarr.tar.gz
+        dest: /opt
+        remote_src: true
+      when: not radarr_binary.stat.exists
+
+    - name: Create systemd service for Radarr
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/radarr.service
+        content: |
+          [Unit]
+          Description=Radarr Daemon
+          After=syslog.target network.target
+          [Service]
+          UMask=0002
+          Type=simple
+          ExecStart=/opt/Radarr/Radarr -nobrowser -data=/var/lib/radarr/
+          TimeoutStopSec=20
+          KillMode=process
+          Restart=on-failure
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start Radarr service
+      ansible.builtin.systemd:
+        name: radarr
+        enabled: true
+        state: started
+        daemon_reload: true
