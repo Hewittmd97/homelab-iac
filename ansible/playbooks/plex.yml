@@ -1,0 +1,22 @@
+---
+- name: Configure Plex container
+  hosts: plex
+  become: true
+  tasks:
+
+    - name: Check installed Plex version
+      ansible.builtin.command: dpkg-query -W -f='${Version}' plexmediaserver
+      register: plex_version
+      changed_when: false
+      failed_when: false
+
+    - name: Install Plex Media Server
+      ansible.builtin.apt:
+        deb: https://downloads.plex.tv/plex-media-server-new/1.43.2.10687-563d026ea/debian/plexmediaserver_1.43.2.10687-563d026ea_amd64.deb
+      when: plex_version.stdout != "1.43.2.10687-563d026ea"
+
+    - name: Ensure Plex service is enabled and running
+      ansible.builtin.systemd:
+        name: plexmediaserver
+        enabled: true
+        state: started
