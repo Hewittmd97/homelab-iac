@@ -1,0 +1,46 @@
+---
+- name: Configure Sonarr container
+  hosts: sonarr
+  become: true
+  tasks:
+
+    - name: Check if Sonarr is installed
+      ansible.builtin.stat:
+        path: /opt/Sonarr/Sonarr
+      register: sonarr_binary
+
+    - name: Download Sonarr release
+      ansible.builtin.get_url:
+        url: https://github.com/Sonarr/Sonarr/releases/latest/download/Sonarr.main.linux-core-x64.tar.gz
+        dest: /tmp/sonarr.tar.gz
+      when: not sonarr_binary.stat.exists
+
+    - name: Extract Sonarr to /opt
+      ansible.builtin.unarchive:
+        src: /tmp/sonarr.tar.gz
+        dest: /opt
+        remote_src: true
+      when: not sonarr_binary.stat.exists
+
+    - name: Create systemd service for Sonarr
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/sonarr.service
+        content: |
+          [Unit]
+          Description=Sonarr Daemon
+          After=syslog.target network.target
+          [Service]
+          Type=simple
+          ExecStart=/opt/Sonarr/Sonarr -nobrowser -data=/var/lib/sonarr/
+          TimeoutStopSec=20
+          KillMode=process
+          Restart=on-failure
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start Sonarr service
+      ansible.builtin.systemd:
+        name: sonarr
+        enabled: true
+        state: started
+        daemon_reload: true
